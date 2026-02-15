@@ -1,0 +1,36 @@
+# Example configuration entry
+#web_server:
+#  port: 80
+
+
+# Enable logging
+logger:
+  level: DEBUG
+
+
+uart:
+  id: uart_bus
+  rx_pin: ${rx_pin}
+#  tx_pin: ${tx_pin}
+  baud_rate: 9600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+  rx_buffer_size: 512
+
+
+interval:
+  - interval: 500ms
+    then:
+      - lambda: |-
+          std::string hex_data = "";
+          while (id(uart_bus).available()) {
+            uint8_t b;
+            id(uart_bus).read_byte(&b);
+            char buf[5];
+            sprintf(buf, "%02X ", b);
+            hex_data += buf;
+          }
+          if (hex_data.length() > 0) {
+            ESP_LOGD("BMS_DEBUG", "Raw: %s", hex_data.c_str());
+          }
