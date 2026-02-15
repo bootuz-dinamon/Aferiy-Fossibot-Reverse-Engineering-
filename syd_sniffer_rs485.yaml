@@ -1,0 +1,219 @@
+substitutions:
+  name: sydrs485
+  device_description: "Aferiy RS485" 
+
+
+
+
+
+
+
+
+
+
+
+
+# Example configuration entry
+#web_server:
+#  port: 80
+
+
+# Enable logging
+logger:
+  level: DEBUG
+
+
+uart:
+  id: uart_bus
+  rx_pin: GPIO19
+#  tx_pin: ${tx_pin}
+  baud_rate: 9600
+  data_bits: 8
+  parity: NONE
+  stop_bits: 1
+  rx_buffer_size: 512
+
+
+sensor:
+  - platform: template
+    name: "Cell 1"
+    id: cell_1
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 2"
+    id: cell_2
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 3"
+    id: cell_3
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 4"
+    id: cell_4
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 5"
+    id: cell_5
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 6"
+    id: cell_6
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 7"
+    id: cell_7
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 8"
+    id: cell_8
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 9"
+    id: cell_9
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 10"
+    id: cell_10
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 11"
+    id: cell_11
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 12"
+    id: cell_12
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 13"
+    id: cell_13
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 14"
+    id: cell_14
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 15"
+    id: cell_15
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+  - platform: template
+    name: "Cell 16"
+    id: cell_16
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    
+  - platform: template
+    name: "Battery Min Cell"
+    id: battery_min_cell
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    force_update: true
+    icon: "mdi:battery-arrow-down"
+  - platform: template
+    name: "Battery Max Cell"
+    id: battery_max_cell
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery-arrow-up"
+  - platform: template
+    name: "Battery Delta"
+    id: battery_delta
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:vector-difference"
+    
+  - platform: template
+    name: "Battery Total Voltage"
+    id: battery_total_voltage
+    unit_of_measurement: "V"
+    accuracy_decimals: 2
+    device_class: voltage
+
+
+
+text_sensor:
+  - platform: template
+    name: "Aferiy Status"
+    update_interval: 500ms 
+    lambda: |-
+      static std::vector<uint8_t> buffer;
+      while (id(uart_bus).available()) {
+        uint8_t b;
+        id(uart_bus).read_byte(&b);
+        buffer.push_back(b);
+        if (buffer.size() > 350) buffer.erase(buffer.begin());
+      }
+
+      for (size_t i = 0; i < buffer.size(); i++) {
+        
+        // --- БЛОК 1: 16 КОМІРОК + АНАЛІТИКА (через маркер 10 01 01 83) ---
+        if (i + 3 < buffer.size() && buffer[i] == 0x10 && buffer[i+1] == 0x01 && buffer[i+2] == 0x01 && buffer[i+3] == 0x83) {
+          if (i >= 64) {
+            int start_idx = i - 64;
+            auto get_v = [&](int idx) {
+                return ((uint16_t(buffer[idx]) << 8) | buffer[idx+1]) / 1000.0;
+            };
+
+            // Зчитуємо всі значення
+            float c[16];
+            for (int j = 0; j < 16; j++) {
+                c[j] = get_v(start_idx + (j * 2));
+            }
+
+            // Публікуємо кожну комірку
+            id(cell_1).publish_state(c[0]);   id(cell_2).publish_state(c[1]);
+            id(cell_3).publish_state(c[2]);   id(cell_4).publish_state(c[3]);
+            id(cell_5).publish_state(c[4]);   id(cell_6).publish_state(c[5]);
+            id(cell_7).publish_state(c[6]);   id(cell_8).publish_state(c[7]);
+            id(cell_9).publish_state(c[8]);   id(cell_10).publish_state(c[9]);
+            id(cell_11).publish_state(c[10]); id(cell_12).publish_state(c[11]);
+            id(cell_13).publish_state(c[12]); id(cell_14).publish_state(c[13]);
+            id(cell_15).publish_state(c[14]); id(cell_16).publish_state(c[15]);
+
+            // Розрахунок Min/Max/Delta
+            float mn = c[0], mx = c[0];
+            for (int j = 1; j < 16; j++) {
+                if (c[j] < mn) mn = c[j];
+                if (c[j] > mx) mx = c[j];
+            }
+
+            if (mn > 2.0 && mx < 4.5) {
+                id(battery_min_cell).publish_state(mn);
+                id(battery_max_cell).publish_state(mx);
+                id(battery_delta).publish_state(mx - mn);
+            }
+            
+            // Щоб не зациклюватися, видаляємо оброблене
+            buffer.erase(buffer.begin(), buffer.begin() + i + 4);
+            return {"Cells Updated"};
+          }
+        }
+
+        // --- БЛОК 2: ЗАГАЛЬНА НАПРУГА БАТАРЕЇ (через маркер 04 00 00 00 18) ---
+        if (i + 12 < buffer.size() && buffer[i] == 0x04 && buffer[i+4] == 0x18) {
+            // Напруга 14 D9 стоїть після серії нулів
+            // У вашому пакеті: 04 00 00 00 18 00 00 00 00 00 00 [14 D9]
+            float total_v = ((uint16_t(buffer[i+11]) << 8) | buffer[i+12]) / 100.0;
+            
+            if (total_v > 40.0 && total_v < 60.0) {
+                id(battery_total_voltage).publish_state(total_v);
+                buffer.erase(buffer.begin(), buffer.begin() + i + 13);
+                return {"Total Voltage Updated"};
+            }
+        }
+      }
+      return {"Scanning..."};
