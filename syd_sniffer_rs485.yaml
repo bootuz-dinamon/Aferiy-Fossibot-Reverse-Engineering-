@@ -138,13 +138,6 @@ sensor:
     accuracy_decimals: 2
     device_class: voltage
 
-  - platform: template
-    name: "Aferiy SoC"
-    id: aferiy_soc
-    unit_of_measurement: "%"
-    accuracy_decimals: 0
-    device_class: battery
-    state_class: measurement
 
 
 
