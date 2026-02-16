@@ -206,12 +206,6 @@ text_sensor:
             }
         }
 
-        // --- 2. SOC (Відсоток) ---
-        if (i + 1 < buffer.size() && buffer[i] == buffer[i+1] && buffer[i] > 5 && buffer[i] <= 100) {
-            // Фільтр, щоб не сплутати з початком напруги або комірок
-            if (buffer[i] != 0x0C && buffer[i] != 0x0D && buffer[i] != 0x11 && buffer[i] != 0x14) {
-                id(aferiy_soc).publish_state(buffer[i]);
-            }
-        }
+
       }
       return {"OK"};
