@@ -146,26 +146,7 @@ sensor:
     device_class: battery
     state_class: measurement
 
-  - platform: template
-    name: "Battery Current"
-    id: battery_current
-    unit_of_measurement: "A"
-    accuracy_decimals: 2
-    device_class: current
 
-  - platform: template
-    name: "Temp 1"
-    id: temp_1
-    unit_of_measurement: "°C"
-    accuracy_decimals: 1
-    device_class: temperature
-
-  - platform: template
-    name: "Temp 2"
-    id: temp_2
-    unit_of_measurement: "°C"
-    accuracy_decimals: 1
-    device_class: temperature
 
 text_sensor:
   - platform: template
@@ -182,23 +163,15 @@ text_sensor:
 
       for (size_t i = 0; i < buffer.size(); i++) {
         
-        // --- 1. НАПРУГА БАТАРЕЇ (Маркер 14 AD або подібний) ---
-        if (i + 1 < buffer.size() && buffer[i] == 0x14 && buffer[i+1] >= 0xA0) {
-            float total_v = ((uint16_t(buffer[i]) << 8) | buffer[i+1]) / 100.0;
-            if (total_v > 40.0 && total_v < 60.0) {
-                id(battery_total_voltage).publish_state(total_v);
-            }
-        }
-
-        // --- 2. НАПРУГИ КОМІРОК (Шукаємо блок 11 04 ... 0C) ---
-        // У дампі: 11 04 00 00 00 3C [0C ED 0C ED ...]
-        if (i + 38 < buffer.size() && buffer[i] == 0x11 && buffer[i+1] == 0x04) {
-            size_t c_start = i + 6; // Комірки починаються через 6 байтів після 11 04
+        // --- 1. БЛОК КОМІРОК ТА НАПРУГИ (11 04) ---
+        if (i + 45 < buffer.size() && buffer[i] == 0x11 && buffer[i+1] == 0x04) {
             
-            // Перевіряємо чи там дійсно напруги (починаються з 0C або 0D)
+            // Шукаємо, де в цьому блоці починаються комірки (зазвичай через 6 байт)
+            size_t c_start = i + 6;
             if (buffer[c_start] == 0x0C || buffer[c_start] == 0x0D) {
                 auto get_cv = [&](int idx) { return ((uint16_t(buffer[idx]) << 8) | buffer[idx+1]) / 1000.0; };
                 
+                // Публікуємо комірки
                 id(cell_1).publish_state(get_cv(c_start));     id(cell_2).publish_state(get_cv(c_start+2));
                 id(cell_3).publish_state(get_cv(c_start+4));   id(cell_4).publish_state(get_cv(c_start+6));
                 id(cell_5).publish_state(get_cv(c_start+8));   id(cell_6).publish_state(get_cv(c_start+10));
@@ -207,8 +180,8 @@ text_sensor:
                 id(cell_11).publish_state(get_cv(c_start+20)); id(cell_12).publish_state(get_cv(c_start+22));
                 id(cell_13).publish_state(get_cv(c_start+24)); id(cell_14).publish_state(get_cv(c_start+26));
                 id(cell_15).publish_state(get_cv(c_start+28)); id(cell_16).publish_state(get_cv(c_start+30));
-                
-                // Дельта для контролю
+
+                // Рахуємо дельту
                 float mn = get_cv(c_start), mx = get_cv(c_start);
                 for(int n=0; n<32; n+=2) {
                     float v = get_cv(c_start+n);
@@ -218,13 +191,24 @@ text_sensor:
                 id(battery_min_cell).publish_state(mn);
                 id(battery_max_cell).publish_state(mx);
                 id(battery_delta).publish_state(mx - mn);
+
+                // --- ШУКАЄМО ТОТАЛ ВОЛЬТАЖ ВСЕРЕДИНІ ЦЬОГО Ж БЛОКУ ---
+                // Ми перебираємо байти ПІСЛЯ комірок у пошуку маркера 0x14
+                for (size_t j = c_start + 30; j < i + 45; j++) {
+                    if (buffer[j] == 0x14 && buffer[j+1] >= 0xA0) {
+                        float total_v = ((uint16_t(buffer[j]) << 8) | buffer[j+1]) / 100.0;
+                        if (total_v > 40.0 && total_v < 60.0) {
+                            id(battery_total_voltage).publish_state(total_v);
+                            break; 
+                        }
+                    }
+                }
             }
         }
 
-        // --- 3. SOC (Відсоток заряду) ---
-        // Шукаємо дублі в кінці пакету (напр. 5D 5D)
+        // --- 2. SOC (Відсоток) ---
         if (i + 1 < buffer.size() && buffer[i] == buffer[i+1] && buffer[i] > 5 && buffer[i] <= 100) {
-            // Фільтруємо системні байти, щоб не плутати з комірками (0x0C)
+            // Фільтр, щоб не сплутати з початком напруги або комірок
             if (buffer[i] != 0x0C && buffer[i] != 0x0D && buffer[i] != 0x11 && buffer[i] != 0x14) {
                 id(aferiy_soc).publish_state(buffer[i]);
             }
