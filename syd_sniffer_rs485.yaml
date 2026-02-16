@@ -185,11 +185,14 @@ text_sensor:
                 id(battery_max_cell).publish_state(mx);
                 id(battery_delta).publish_state(mx - mn);
 
-                // --- ШУКАЄМО ТОТАЛ ВОЛЬТАЖ ВСЕРЕДИНІ ЦЬОГО Ж БЛОКУ ---
-                // Ми перебираємо байти ПІСЛЯ комірок у пошуку маркера 0x14
-                for (size_t j = c_start + 30; j < i + 45; j++) {
-                    if (buffer[j] == 0x14 && buffer[j+1] >= 0xA0) {
+
+                // --- ЗАГАЛЬНА НАПРУГА (Блок 11 04) ---
+                // Шукаємо маркер 14 у розширеному діапазоні після комірок
+                for (size_t j = c_start + 30; j < i + 55; j++) {
+                    if (j + 1 < buffer.size() && buffer[j] == 0x14) {
                         float total_v = ((uint16_t(buffer[j]) << 8) | buffer[j+1]) / 100.0;
+                        
+                        // Піднімаємо верхню межу до 60В, щоб бачити повний заряд
                         if (total_v > 40.0 && total_v < 60.0) {
                             id(battery_total_voltage).publish_state(total_v);
                             break; 
