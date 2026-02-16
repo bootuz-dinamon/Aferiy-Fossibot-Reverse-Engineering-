@@ -2,7 +2,6 @@ Portable charging stations Aferiy and Fossibot are made by the Chinese company S
 Using ESP32 and ESPHome, you can receive additional data from the station about the voltage on the battery cells, the total voltage on the battery, and the difference in voltage on the cells.
 
 - Total Voltage
-- SOC
 - Cell Volage
 - Delta Voltage
 - Min Cell Voltage
