@@ -15,6 +15,10 @@ Should also work on Fossibot F2400 and others.
 [Fossibot portable charging stations](https://eu.fossibot.com/jafthdox)
 
 
+
+https://github.com/iamslan/fossibot-reverse-engineering - You will find more information here.
+
+
 [![Watch the video](https://img.youtube.com/vi/Tk8VCeJcEkE/hqdefault.jpg)](https://www.youtube.com/embed/Tk8VCeJcEkE)
 
 
