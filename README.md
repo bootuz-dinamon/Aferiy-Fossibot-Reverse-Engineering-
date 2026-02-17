@@ -13,3 +13,9 @@ Tested on Aferiy P280 (Should also work on P210, P180 and others.)
 
 Should also work on Fossibot F2400 and others.
 [Fossibot portable charging stations](https://eu.fossibot.com/jafthdox)
+
+
+[![Watch the video](https://img.youtube.com/vi/Tk8VCeJcEkE/hqdefault.jpg)](https://www.youtube.com/embed/Tk8VCeJcEkE)
+
+[<img src="https://img.youtube.com/vi/Tk8VCeJcEkE/hqdefault.jpg" width="600" height="300"
+/>](https://www.youtube.com/embed/Tk8VCeJcEkE)
