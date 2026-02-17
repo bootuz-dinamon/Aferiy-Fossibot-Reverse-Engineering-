@@ -28,180 +28,265 @@ uart:
   stop_bits: 1
   rx_buffer_size: 512
 
+# =========================
+# SENSORS
+# =========================
 
 sensor:
+
+  # --- 16 CELL VOLTAGES ---
   - platform: template
     name: "Cell 1"
     id: cell_1
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 2"
     id: cell_2
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 3"
     id: cell_3
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 4"
     id: cell_4
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 5"
     id: cell_5
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 6"
     id: cell_6
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 7"
     id: cell_7
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 8"
     id: cell_8
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 9"
     id: cell_9
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 10"
     id: cell_10
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 11"
     id: cell_11
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 12"
     id: cell_12
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 13"
     id: cell_13
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 14"
     id: cell_14
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 15"
     id: cell_15
     unit_of_measurement: "V"
     accuracy_decimals: 3
+    state_class: measurement
+
   - platform: template
     name: "Cell 16"
     id: cell_16
     unit_of_measurement: "V"
     accuracy_decimals: 3
-    
+    state_class: measurement
+
+
+  # --- PACK VALUES ---
   - platform: template
-    name: "Battery Min Cell"
-    id: battery_min_cell
-    unit_of_measurement: "V"
-    accuracy_decimals: 3
-    force_update: true
-    icon: "mdi:battery-arrow-down"
-  - platform: template
-    name: "Battery Max Cell"
-    id: battery_max_cell
-    unit_of_measurement: "V"
-    accuracy_decimals: 3
-    icon: "mdi:battery-arrow-up"
-  - platform: template
-    name: "Battery Delta"
-    id: battery_delta
-    unit_of_measurement: "V"
-    accuracy_decimals: 3
-    icon: "mdi:vector-difference"
-    
-  - platform: template
-    name: "Battery Total Voltage"
-    id: battery_total_voltage
+    name: "Battery Voltage"
+    id: battery_voltage
     unit_of_measurement: "V"
     accuracy_decimals: 2
     device_class: voltage
+    state_class: measurement
 
-
-
-
-text_sensor:
   - platform: template
-    name: "Aferiy Status"
-    update_interval: 500ms 
-    lambda: |-
-      static std::vector<uint8_t> buffer;
-      while (id(uart_bus).available()) {
-        uint8_t b;
-        id(uart_bus).read_byte(&b);
-        buffer.push_back(b);
-        if (buffer.size() > 512) buffer.erase(buffer.begin());
-      }
+    name: "Battery Current"
+    id: battery_current
+    unit_of_measurement: "A"
+    accuracy_decimals: 2
+    device_class: current
+    state_class: measurement
 
-      for (size_t i = 0; i < buffer.size(); i++) {
-        
-        // --- 1. БЛОК КОМІРОК ТА НАПРУГИ (11 04) ---
-        if (i + 45 < buffer.size() && buffer[i] == 0x11 && buffer[i+1] == 0x04) {
-            
-            // Шукаємо, де в цьому блоці починаються комірки (зазвичай через 6 байт)
-            size_t c_start = i + 6;
-            if (buffer[c_start] == 0x0C || buffer[c_start] == 0x0D) {
-                auto get_cv = [&](int idx) { return ((uint16_t(buffer[idx]) << 8) | buffer[idx+1]) / 1000.0; };
-                
-                // Публікуємо комірки
-                id(cell_1).publish_state(get_cv(c_start));     id(cell_2).publish_state(get_cv(c_start+2));
-                id(cell_3).publish_state(get_cv(c_start+4));   id(cell_4).publish_state(get_cv(c_start+6));
-                id(cell_5).publish_state(get_cv(c_start+8));   id(cell_6).publish_state(get_cv(c_start+10));
-                id(cell_7).publish_state(get_cv(c_start+12));  id(cell_8).publish_state(get_cv(c_start+14));
-                id(cell_9).publish_state(get_cv(c_start+16));  id(cell_10).publish_state(get_cv(c_start+18));
-                id(cell_11).publish_state(get_cv(c_start+20)); id(cell_12).publish_state(get_cv(c_start+22));
-                id(cell_13).publish_state(get_cv(c_start+24)); id(cell_14).publish_state(get_cv(c_start+26));
-                id(cell_15).publish_state(get_cv(c_start+28)); id(cell_16).publish_state(get_cv(c_start+30));
+  - platform: template
+    name: "Battery Power"
+    id: battery_power
+    unit_of_measurement: "W"
+    accuracy_decimals: 1
+    device_class: power
+    state_class: measurement
 
-                // Рахуємо дельту
-                float mn = get_cv(c_start), mx = get_cv(c_start);
-                for(int n=0; n<32; n+=2) {
-                    float v = get_cv(c_start+n);
-                    if (v < mn) mn = v;
-                    if (v > mx) mx = v;
-                }
-                id(battery_min_cell).publish_state(mn);
-                id(battery_max_cell).publish_state(mx);
-                id(battery_delta).publish_state(mx - mn);
+  - platform: template
+    name: "Battery Delta"
+    id: delta_cell
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    state_class: measurement
 
 
-                // --- ЗАГАЛЬНА НАПРУГА (Блок 11 04) ---
-                // Шукаємо маркер 14 у розширеному діапазоні після комірок
-                for (size_t j = c_start + 30; j < i + 55; j++) {
-                    if (j + 1 < buffer.size() && buffer[j] == 0x14) {
-                        float total_v = ((uint16_t(buffer[j]) << 8) | buffer[j+1]) / 100.0;
-                        
-                        // Піднімаємо верхню межу до 60В, щоб бачити повний заряд
-                        if (total_v > 40.0 && total_v < 60.0) {
-                            id(battery_total_voltage).publish_state(total_v);
-                            break; 
-                        }
-                    }
-                }
+
+# =========================
+# BINARY SENSORS
+# =========================
+
+binary_sensor:
+  - platform: template
+    name: "BMS Overvoltage"
+    id: alarm_ov
+
+  - platform: template
+    name: "BMS Undervoltage"
+    id: alarm_uv
+
+  - platform: template
+    name: "Balancing Active"
+    id: balancing_active
+
+
+# =========================
+# FRAME PARSER
+# =========================
+
+interval:
+  - interval: 200ms
+    then:
+      - lambda: |-
+          static std::vector<uint8_t> buffer;
+
+          while (id(uart_bus).available()) {
+            uint8_t b;
+            id(uart_bus).read_byte(&b);
+            buffer.push_back(b);
+            if (buffer.size() > 300)
+              buffer.erase(buffer.begin());
+          }
+
+          if (buffer.size() < 60)
+            return;
+
+          for (size_t i = 0; i < buffer.size() - 50; i++) {
+
+            if (buffer[i] == 0x11 && buffer[i+1] == 0x04) {
+
+              int start = i + 5;
+              if (start + 40 >= buffer.size())
+                continue;
+
+              auto get_v = [&](int idx) {
+                return ((uint16_t(buffer[idx+1]) << 8) | buffer[idx]) / 1000.0;
+              };
+
+              float cells[16];
+              for (int c = 0; c < 16; c++)
+                cells[c] = get_v(start + c*2);
+
+              if (cells[0] < 2.0 || cells[0] > 4.0)
+                continue;
+
+              float min_v = cells[0];
+              float max_v = cells[0];
+              float total_v = 0;
+
+              for (int c = 0; c < 16; c++) {
+                total_v += cells[c];
+                if (cells[c] < min_v) min_v = cells[c];
+                if (cells[c] > max_v) max_v = cells[c];
+              }
+
+              id(cell_1).publish_state(cells[0]);
+              id(cell_2).publish_state(cells[1]);
+              id(cell_3).publish_state(cells[2]);
+              id(cell_4).publish_state(cells[3]);
+              id(cell_5).publish_state(cells[4]);
+              id(cell_6).publish_state(cells[5]);
+              id(cell_7).publish_state(cells[6]);
+              id(cell_8).publish_state(cells[7]);
+              id(cell_9).publish_state(cells[8]);
+              id(cell_10).publish_state(cells[9]);
+              id(cell_11).publish_state(cells[10]);
+              id(cell_12).publish_state(cells[11]);
+              id(cell_13).publish_state(cells[12]);
+              id(cell_14).publish_state(cells[13]);
+              id(cell_15).publish_state(cells[14]);
+              id(cell_16).publish_state(cells[15]);
+
+              id(delta_cell).publish_state(max_v - min_v);
+              id(battery_voltage).publish_state(total_v);
+
+              int16_t current_raw = (int16_t)((buffer[start+39] << 8) | buffer[start+38]);
+              float current = current_raw / 100.0;
+
+              id(battery_current).publish_state(current);
+
+              id(battery_power).publish_state(total_v * current);
+
+              uint16_t alarm = (buffer[start+35] << 8) | buffer[start+34];
+              id(alarm_ov).publish_state(alarm & 0x0001);
+              id(alarm_uv).publish_state(alarm & 0x0002);
+
+              uint16_t balance_mask = (buffer[start+37] << 8) | buffer[start+36];
+              id(balancing_active).publish_state(balance_mask != 0);
+
+
+
+              buffer.clear();
+              return;
             }
-        }
-
-
-      }
-      return {"OK"};
+          }
