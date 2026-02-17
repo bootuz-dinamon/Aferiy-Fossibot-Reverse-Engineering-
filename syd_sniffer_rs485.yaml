@@ -158,6 +158,12 @@ sensor:
     state_class: measurement
 
   - platform: template
+    name: "Aferiy SOC"
+    id: aferiy_soc
+    unit_of_measurement: "%"
+    state_class: measurement
+
+  - platform: template
     name: "Battery Current"
     id: battery_current
     unit_of_measurement: "A"
@@ -180,6 +186,19 @@ sensor:
     accuracy_decimals: 3
     state_class: measurement
 
+  - platform: template
+    name: "Battery Min Cell"
+    id: battery_min_cell
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    force_update: true
+    icon: "mdi:battery-arrow-down"
+  - platform: template
+    name: "Battery Max Cell"
+    id: battery_max_cell
+    unit_of_measurement: "V"
+    accuracy_decimals: 3
+    icon: "mdi:battery-arrow-up"
 
 
 # =========================
@@ -209,79 +228,80 @@ interval:
     then:
       - lambda: |-
           static std::vector<uint8_t> buffer;
+          static float last_soc = -1; 
 
           while (id(uart_bus).available()) {
             uint8_t b;
             id(uart_bus).read_byte(&b);
             buffer.push_back(b);
-            if (buffer.size() > 300)
-              buffer.erase(buffer.begin());
+            if (buffer.size() > 512) buffer.erase(buffer.begin());
           }
 
-          if (buffer.size() < 60)
-            return;
+          if (buffer.size() < 60) return;
 
-          for (size_t i = 0; i < buffer.size() - 50; i++) {
-
+          for (size_t i = 0; i + 50 < buffer.size(); i++) {
+            // Шукаємо пакет комірок
             if (buffer[i] == 0x11 && buffer[i+1] == 0x04) {
-
-              int start = i + 5;
-              if (start + 40 >= buffer.size())
-                continue;
-
+              
+              int start = i + 6; // У Sydpower дані йдуть після 6-го байта
+              
+              // Функція читання Big Endian (Старший байт першим)
               auto get_v = [&](int idx) {
-                return ((uint16_t(buffer[idx+1]) << 8) | buffer[idx]) / 1000.0;
+                return ((uint16_t(buffer[idx]) << 8) | buffer[idx+1]) / 1000.0;
               };
 
               float cells[16];
-              for (int c = 0; c < 16; c++)
+              float total_v = 0;
+              
+              // Зчитуємо комірки
+              for (int c = 0; c < 16; c++) {
                 cells[c] = get_v(start + c*2);
+              }
 
-              if (cells[0] < 2.0 || cells[0] > 4.0)
-                continue;
+              // Валідація: якщо перша комірка не в межах 2-4В, це "сміття"
+              if (cells[0] < 2.0 || cells[0] > 4.5) continue;
 
               float min_v = cells[0];
               float max_v = cells[0];
-              float total_v = 0;
 
               for (int c = 0; c < 16; c++) {
                 total_v += cells[c];
                 if (cells[c] < min_v) min_v = cells[c];
                 if (cells[c] > max_v) max_v = cells[c];
+                
+                // Публікуємо напругу кожної комірки динамічно
+                if (c == 0) id(cell_1).publish_state(cells[0]);
+                else if (c == 1) id(cell_2).publish_state(cells[1]);
+                else if (c == 2) id(cell_3).publish_state(cells[2]);
+                else if (c == 3) id(cell_4).publish_state(cells[3]);
+                else if (c == 4) id(cell_5).publish_state(cells[4]);
+                else if (c == 5) id(cell_6).publish_state(cells[5]);
+                else if (c == 6) id(cell_7).publish_state(cells[6]);
+                else if (c == 7) id(cell_8).publish_state(cells[7]);
+                else if (c == 8) id(cell_9).publish_state(cells[8]);
+                else if (c == 9) id(cell_10).publish_state(cells[9]);
+                else if (c == 10) id(cell_11).publish_state(cells[10]);
+                else if (c == 11) id(cell_12).publish_state(cells[11]);
+                else if (c == 12) id(cell_13).publish_state(cells[12]);
+                else if (c == 13) id(cell_14).publish_state(cells[13]);
+                else if (c == 14) id(cell_15).publish_state(cells[14]);
+                else if (c == 15) id(cell_16).publish_state(cells[15]);
               }
 
-              id(cell_1).publish_state(cells[0]);
-              id(cell_2).publish_state(cells[1]);
-              id(cell_3).publish_state(cells[2]);
-              id(cell_4).publish_state(cells[3]);
-              id(cell_5).publish_state(cells[4]);
-              id(cell_6).publish_state(cells[5]);
-              id(cell_7).publish_state(cells[6]);
-              id(cell_8).publish_state(cells[7]);
-              id(cell_9).publish_state(cells[8]);
-              id(cell_10).publish_state(cells[9]);
-              id(cell_11).publish_state(cells[10]);
-              id(cell_12).publish_state(cells[11]);
-              id(cell_13).publish_state(cells[12]);
-              id(cell_14).publish_state(cells[13]);
-              id(cell_15).publish_state(cells[14]);
-              id(cell_16).publish_state(cells[15]);
-
+              // Публікуємо розрахунки
+              id(battery_min_cell).publish_state(min_v);
+              id(battery_max_cell).publish_state(max_v);
               id(delta_cell).publish_state(max_v - min_v);
               id(battery_voltage).publish_state(total_v);
 
-              int16_t current_raw = (int16_t)((buffer[start+39] << 8) | buffer[start+38]);
+              // СТРУМ (Current)
+              int16_t current_raw = (int16_t)((buffer[start+38] << 8) | buffer[start+39]);
               float current = current_raw / 100.0;
-
               id(battery_current).publish_state(current);
-
               id(battery_power).publish_state(total_v * current);
 
-              uint16_t alarm = (buffer[start+35] << 8) | buffer[start+34];
-              id(alarm_ov).publish_state(alarm & 0x0001);
-              id(alarm_uv).publish_state(alarm & 0x0002);
-
-              uint16_t balance_mask = (buffer[start+37] << 8) | buffer[start+36];
+              // БАЛАНСУВАННЯ ТА АЛАРМИ
+              uint16_t balance_mask = (buffer[start+36] << 8) | buffer[start+37];
               id(balancing_active).publish_state(balance_mask != 0);
 
 
