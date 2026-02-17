@@ -17,5 +17,4 @@ Should also work on Fossibot F2400 and others.
 
 [![Watch the video](https://img.youtube.com/vi/Tk8VCeJcEkE/hqdefault.jpg)](https://www.youtube.com/embed/Tk8VCeJcEkE)
 
-[<img src="https://img.youtube.com/vi/Tk8VCeJcEkE/hqdefault.jpg" width="600" height="300"
-/>](https://www.youtube.com/embed/Tk8VCeJcEkE)
+
